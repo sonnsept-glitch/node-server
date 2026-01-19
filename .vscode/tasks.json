@@ -2,16 +2,9 @@
 "version": "2.0.0",
 "tasks": [
   {
-    "label": "stop-processes",
-    "type": "shell",
-    "command": "(pkill -f 'start.sh' || true) && (pkill -f 'redis' || true)",
-    "problemMatcher": []
-  },
-  {
     "label": "start-script",
     "type": "shell",
     "command": "(chmod +x start.sh && ./start.sh)",
-    "dependsOn": ["stop-processes"],
     "runOptions": {
       "runOn": "folderOpen"
     },
