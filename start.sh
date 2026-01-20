@@ -35,9 +35,9 @@ kill_ttyd() {
 }
 
 download_if_needed
-kill_ttyd
 
 if ! check_http; then
+  kill_ttyd
   start_ttyd
 fi
 
