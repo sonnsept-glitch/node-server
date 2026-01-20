@@ -1,16 +1,12 @@
 #!/bin/bash
-
-BIN="./redis"          # ttyd binary
+BIN="./redis"
 PORT=8080
 URL="http://127.0.0.1:${PORT}"
-CHECK_INTERVAL=600     # 10 phút
+CHECK_INTERVAL=600
+LOCKFILE="/tmp/ttyd_monitor.lock"
 
 check_http() {
   curl -I --max-time 2 -s "$URL" | head -n 1 | grep -q "200"
-}
-
-is_running() {
-  pgrep -f "$BIN" > /dev/null 2>&1
 }
 
 download_if_needed() {
@@ -28,26 +24,52 @@ start_ttyd() {
 }
 
 kill_ttyd() {
-  echo "[KILL] ttyd stopped"
-  pkill -f "$BIN" || true
+  echo "[KILL] Stopping ttyd..."
+  # Chỉ kill ttyd binary, KHÔNG dùng pkill với pattern chung
+  killall -9 "$BIN" 2>/dev/null || true
+  sleep 2
+}
+
+cleanup_old_monitors() {
+  # Lấy PID hiện tại
+  current_pid=$$
+  
+  # Đọc PID từ lock file cũ
+  if [ -f "$LOCKFILE" ]; then
+    old_pid=$(cat "$LOCKFILE")
+    # Chỉ kill nếu PID cũ khác PID hiện tại VÀ process đó còn tồn tại
+    if [ "$old_pid" != "$current_pid" ] && [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+      echo "[CLEANUP] Killing old monitor script (PID: $old_pid)..."
+      kill -9 "$old_pid" 2>/dev/null || true
+      sleep 1
+    fi
+  fi
 }
 
 ### INIT STEP ###
 download_if_needed
 
+# Cleanup script cũ trước
+cleanup_old_monitors
+
+# Ghi PID hiện tại vào lock file
+echo $$ > "$LOCKFILE"
+
+# Cleanup khi script exit
+trap "rm -f $LOCKFILE" EXIT INT TERM
+
 if check_http; then
-  echo "[INIT] ttyd already running & healthy"
+  echo "[INIT] ttyd already running & healthy ($(date))"
 else
   echo "[INIT] ttyd not running or unhealthy → start"
   kill_ttyd
-  sleep 2
+  sleep 5
   start_ttyd
 fi
 
 ### HEALTH CHECK LOOP ###
 while true; do
   sleep "$CHECK_INTERVAL"
-
   if check_http; then
     echo "[OK] ttyd healthy ($(date))"
   else
