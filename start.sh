@@ -4,7 +4,7 @@ BIN="./redis"          # ttyd binary
 PID_FILE="/tmp/redis_ttyd.pid"
 PORT=8080
 URL="http://127.0.0.1:${PORT}"
-CHECK_INTERVAL=600     # 10 phút
+CHECK_INTERVAL=120
 
 check_http() {
   curl -fs --max-time 2 "$URL" >/dev/null
